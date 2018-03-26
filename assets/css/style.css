@@ -1,0 +1,22 @@
+.container-fluid {
+    margin-top: 30px;
+}
+
+.jumbotron {
+    text-align: center;
+}
+
+.form-field {
+    display: block;
+    margin-top: 10px;
+}
+
+input {
+    width: 100%;
+    font-size: 18px;
+    border-radius: 3px;
+}
+
+#submit {
+    margin-top: 20px;
+}
