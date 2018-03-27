@@ -26,8 +26,8 @@ document.getElementById('submit').addEventListener('click', function (event) {
     console.log(destination);
 
     // capture first train time
-    var firstTrain = document.getElementById('first-train').value
-    console.log(firstTrain);
+    var firstTrainTime = document.getElementById('first-train').value
+    console.log(firstTrainTime);
 
     // capture frequency
     var frequency = document.getElementById('frequency').value
@@ -37,13 +37,13 @@ document.getElementById('submit').addEventListener('click', function (event) {
     var incomplete = document.getElementById('incomplete');
 
     // validate inputs
-    if (trainName !== '' && destination !== '' && firstTrain !== '' && frequency !== '') {
+    if (trainName !== '' && destination !== '' && firstTrainTime !== '' && frequency !== '') {
 
         // push values to firebase
         database.ref().push({
             trainName: trainName,
             destination: destination,
-            firstTrain: firstTrain,
+            firstTrainTime: firstTrainTime,
             frequency: frequency
         });
 
@@ -62,46 +62,46 @@ document.getElementById('submit').addEventListener('click', function (event) {
 });
 
 // pull data from firebase on pg load and new train added
-database.ref().on('child_added', function (snapshot) {
+database.ref().on('child_added', function (childSnapshot) {
 
     // log everything in database
-    console.log(snapshot.val().trainName);
-    console.log(snapshot.val().destination);
-    console.log(snapshot.val().firstTrain);
-    console.log(snapshot.val().frequency);
+    console.log(childSnapshot.val().trainName);
+    console.log(childSnapshot.val().destination);
+    console.log(childSnapshot.val().firstTrainTime);
+    console.log(childSnapshot.val().frequency);
 
-    // create variables of snapshot
-    var newTrainName = snapshot.val().trainName;
-    var newDestination = snapshot.val().destination;
-    var newFirstTrain = snapshot.val().firstTrain;
-    var newFrequency = snapshot.val().frequency;
+    // Store everything into a variable.
+    var trainNameData = childSnapshot.val().trainName;
+    var destinationData = childSnapshot.val().destination;
+    var frequencyData = childSnapshot.val().frequency;
+    var firstTrainTimeData = childSnapshot.val().firstTrainTime;
 
-    var firstTimeConverted = moment(newFirstTrain, "HH:mm");
-    console.log('ft: ' + firstTimeConverted);
+    var timeArr = firstTrainTimeData.split(":"); // splits user inputed first time 09:40 to ["09", "20"]
+    var trainTime = moment().hours(timeArr[0]).minutes(timeArr[1]); // this make an actual "moment" out of the time
+    var maxMoment = moment.max(moment(), trainTime);
+    console.log(maxMoment);
+    var tMinutes;
+    var tArrival;
 
-    var currentTime = moment().format("HH:mm");
-    console.log("CURRENT TIME: " + currentTime);
+    // If the first train is later than the current time, sent arrival to the first train time
+    // https://momentjs.com/docs/#/get-set/max/
+    if (maxMoment === trainTime) {
+        tArrival = trainTime.format("hh:mm A");
+        tMinutes = trainTime.diff(moment(), "minutes");
+    } else {
 
-    // store difference between currentTime and first train converted
-    var timeDiff = moment().diff(moment(firstTimeConverted), "minutes");
-    console.log('diff: ' + timeDiff);
+        // Calculate the minutes until arrival using hardcore math
+        // To calculate the minutes till arrival, take the current time in unix subtract the FirstTrain time
+        // and find the modulus between the difference and the frequency.
+        var differenceTimes = moment().diff(trainTime, "minutes");
+        var tRemainder = differenceTimes % frequencyData;
+        tMinutes = frequencyData - tRemainder;
+        // To calculate the arrival time, add the tMinutes to the current time
+        tArrival = moment().add(tMinutes, "m").format("hh:mm A");
+    }
 
-    // find Remainder of the time left and store in a variable
-    var timeRemainder = timeDiff % newFrequency;
-    console.log(timeRemainder);
-
-    // to calculate minutes till train,we store it in a variable
-    var minToTrain = newFrequency - timeRemainder;
-
-    // next train
-    var nxTrain = moment().add(minToTrain, "minutes").format("HH:mm");
-
-    // append new to data to table
-    $('.table').append('<tr><td>' + newTrainName + '</td><td>' + newDestination + '</td><td>' + newFrequency + '</td><td>' + nxTrain + '</td><td>' + minToTrain + '</td>');
-
+    // append new data to table
+    var newRow = "<tr><td>" + trainNameData + "</td><td>" + destinationData + "</td><td>" + firstTrainTimeData + "</td><td>" +
+        frequencyData + "</td><td>" + tArrival + "</td><td>" + tMinutes + "</td></tr>"
+    $('.table').append(newRow)
 });
-
-// use snapshot to populate schedule table
-// checkout 'for in loop' to iterate through data
-// use 'for in loop' inside snapshot 
-// use moment.js .diff method to do calculation
